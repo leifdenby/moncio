@@ -86,24 +86,24 @@ class MoncConfig():
 
 
 class Field():
-    def __init__(self, name, coarsening=0, op=None, child_nodes=[], op_arguments=[]):
+    def __init__(self, name, inv_shape=np.ones((3,)), op=None, child_nodes=[], op_arguments=[]):
         self.name = name
         self.op = op
-        self.coarsening = coarsening
+        self.inv_shape = inv_shape
         self.child_nodes = child_nodes
         self.op_arguments = op_arguments
 
     def __add__(self, other):
-        assert self.coarsening == other.coarsening
-        return Field("%s + %s" % (self.name, other.name), op="ADD", child_nodes=(self, other))
+        assert np.all(self.inv_shape == other.inv_shape)
+        return Field("%s + %s" % (self.name, other.name), op="ADD", child_nodes=(self, other), inv_shape=self.inv_shape)
 
     def __mul__(self, other):
-        assert self.coarsening == other.coarsening
-        return Field("%s * %s" % (self.name, other.name), op="MUL", child_nodes=(self, other))
+        assert np.all(self.inv_shape == other.inv_shape)
+        return Field("%s * %s" % (self.name, other.name), op="MUL", child_nodes=(self, other), inv_shape=self.inv_shape)
 
     def __sub__(self, other):
-        assert self.coarsening == other.coarsening
-        return Field("%s - %s" % (self.name, other.name), op="SUB", child_nodes=(self, other))
+        assert np.all(self.inv_shape == other.inv_shape)
+        return Field("%s - %s" % (self.name, other.name), op="SUB", child_nodes=(self, other), inv_shape=self.inv_shape)
 
     def __str__(self):
         if not self.op is None:
@@ -113,17 +113,29 @@ class Field():
             return self.name
 
     def mean(self, axis):
-        return Field("mean", op="MEAN", child_nodes=[self,], op_arguments=dict(axis=axis))
+        assert(self.inv_shape[axis] != np.inf)
+        inv_shape = np.array(self.inv_shape)
+        inv_shape[axis] = np.inf
+        return Field("mean", op="MEAN", child_nodes=[self,], op_arguments=dict(axis=axis), inv_shape=inv_shape)
+
+    def repeat(self, axis):
+        assert(self.inv_shape[axis] == np.inf)
+        inv_shape = np.array(self.inv_shape)
+        inv_shape[axis] = 1
+        return Field("repeat", op="REPEAT", child_nodes=[self,], op_arguments=dict(axis=axis), inv_shape=inv_shape)
 
     def coarsen(self, level):
-        return Field("coarse", op="COARSEN", child_nodes=[self,], op_arguments=dict(level=level), coarsening=self.coarsening+1)
+        inv_shape = np.ndarray(self.inv_shape)*2**level
+        return Field("coarse", op="COARSEN", child_nodes=[self,], op_arguments=dict(level=level), inv_shape=inv_shape)
 
     def build_xml(self):
         raise NotImplementedError
 
     @property
     def shape(self):
-        return np.ones((3,))/2**self.coarsening
+        shape = np.ones((3,))/self.inv_shape
+        shape = filter(lambda d: d != 0.0, shape)
+        return shape
 
 
 if __name__ == "__main__":
@@ -133,11 +145,14 @@ if __name__ == "__main__":
     wv = w*v
 
     print wv
-    w_prime_horizontal = w.mean(axis=0) - w
-    w_prime_horizontal.name = "w_prime_horizontal"
+    w_horizontal_mean = w.mean(axis=0).mean(axis=1)
+    w_horizontal_mean.name = "w_horizonal_mean"
     # print w.mean(axis=0).coarsen(level=1) - w
 
-    fields = [w, v, w_prime_horizontal]
+    w_prime_horz = w_horizontal_mean.repeat(axis=1).repeat(axis=0) - w
+    w_prime_horz.name = "w_prime_horz"
+
+    fields = [w, v, w_horizontal_mean, w_prime_horz]
     monc_configuration = make_config_with_default_groups(fields)
 
     print monc_configuration.render_xml()
