@@ -84,6 +84,22 @@ class MoncConfig():
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="  ")
 
+class FieldBoolean:
+    class Operator:
+        GT=">"
+        LT="<"
+        EQ="="
+
+    def __init__(self, arg_left, op, arg_right):
+        if not op in [FieldBoolean.Operator.GT, FieldBoolean.Operator.LT, FieldBoolean.Operator.EQ]:
+            raise NotImplementedError("The requsted comparison boolean has not been implemented")
+        self.arg_left = arg_left
+        self.op = op
+        self.arg_right = arg_right
+
+    def __str__(self):
+        return "{}{}{}".format(str(self.arg_left), self.op, str(self.arg_right))
+
 
 class Field():
     def __init__(self, name, inv_shape=np.ones((3,)), op=None, child_nodes=[], op_arguments=[]):
@@ -112,11 +128,16 @@ class Field():
         else:
             return self.name
 
-    def mean(self, axis):
-        assert(self.inv_shape[axis] != np.inf)
+    def mean(self, axis, mask=None):
+        if not self.inv_shape[axis] != np.inf:
+            raise Exception("This field has already been reduced in the {} direction".format('xyz'[axis]))
+
         inv_shape = np.array(self.inv_shape)
         inv_shape[axis] = np.inf
-        return Field("mean", op="MEAN", child_nodes=[self,], op_arguments=dict(axis=axis), inv_shape=inv_shape)
+        args = dict(axis=axis) 
+        if not mask is None:
+            args['mask'] = mask
+        return Field("mean", op="MEAN", child_nodes=[self,], op_arguments=args, inv_shape=inv_shape)
 
     def repeat(self, axis):
         assert(self.inv_shape[axis] == np.inf)
@@ -163,16 +184,25 @@ class Field():
         shape = filter(lambda d: d != 0.0, shape)
         return shape
 
+    def __gt__(self, other):
+        return FieldBoolean(arg_left=self, op=FieldBoolean.Operator.GT, arg_right=other)
+
+    def __lt__(self, other):
+        return FieldBoolean(arg_left=self, op=FieldBoolean.Operator.LT, arg_right=other)
+
+    def __eq__(self, other):
+        return FieldBoolean(arg_left=self, op=FieldBoolean.Operator.EQ, arg_right=other)
+
 
 if __name__ == "__main__":
     w = Field('w')
     v = Field('v')
+    q = Field('q')
 
     wv = w*v
 
     w_horizontal_mean = w.mean(axis=0).mean(axis=1)
     w_horizontal_mean.name = "w_horizonal_mean"
-    # print w.mean(axis=0).coarsen(level=1) - w
 
     w_prime_horz = w_horizontal_mean.repeat(axis=1).repeat(axis=0) - w
     w_prime_horz.name = "w_prime_horz"
@@ -180,7 +210,11 @@ if __name__ == "__main__":
     w_clb = w[:,:,12]
     w_clb.name = "w_cloudbase"
 
-    fields = [w, v, wv, w_horizontal_mean, w_prime_horz, w_clb]
+    updraft_mask = w > 0.0
+    q_updraft = q.mean(axis=0, mask=updraft_mask).mean(axis=1, mask=updraft_mask)
+    q_updraft.name = "q_updraft"
+
+    fields = [w, v, wv, w_horizontal_mean, w_prime_horz, w_clb, q_updraft]
     monc_configuration = make_config_with_default_groups(fields)
 
     print monc_configuration.render_xml()
