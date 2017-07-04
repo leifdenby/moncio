@@ -131,6 +131,8 @@ class Field():
     def mean(self, axis, mask=None):
         if not self.inv_shape[axis] != np.inf:
             raise Exception("This field has already been reduced in the {} direction".format('xyz'[axis]))
+        if not isinstance(mask, FieldBoolean):
+            raise Exception("Masks may only be defined through boolean comparisons between fields and scalar values")
 
         inv_shape = np.array(self.inv_shape)
         inv_shape[axis] = np.inf
