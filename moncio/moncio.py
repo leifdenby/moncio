@@ -148,7 +148,7 @@ class Field():
         return Field("repeat", op="REPEAT", child_nodes=[self,], op_arguments=dict(axis=axis), inv_shape=inv_shape)
 
     def coarsen(self, level):
-        inv_shape = np.ndarray(self.inv_shape)*2**level
+        inv_shape = np.array(self.inv_shape)*2**level
         return Field("coarse", op="COARSEN", child_nodes=[self,], op_arguments=dict(level=level), inv_shape=inv_shape)
 
     def build_xml(self):
