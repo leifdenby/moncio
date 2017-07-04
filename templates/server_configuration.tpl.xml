@@ -1,0 +1,3 @@
+<server-configuration>
+  <thread_pool number="100"/>
+</server-configuration>

@@ -1,0 +1,29 @@
+<io-configuration>
+	<server-configuration>
+		<thread_pool number=100/>
+	</server-configuration>
+
+<data-definition name="3d_fields_data" frequency="{3d_sampling_frequency}">
+  <field name="w" type="array" data_type="double" size="z,y,x" collective=true optional=true/>
+  <field name="u" type="array" data_type="double" size="z,y,x" collective=true optional=true/>
+  <field name="v" type="array" data_type="double" size="z,y,x" collective=true optional=true/>
+  <field name="th" type="array" data_type="double" size="zn,y,x" collective=true optional=true/>
+  <field name="q" type="array" data_type="double" size="z,y,x,qfields" collective=true optional=true/>
+</data-definition>
+
+<group name="3d_fields">
+  <member name="w"/>
+  <member name="u"/>
+  <member name="v"/>
+  <member name="th"/>
+  <member name="q"/>
+</group>
+
+<data-writing>
+  <file name="diagnostic_files/diagnostics_ts.nc" write_time_frequency="{diag_write_freq}" title="All diagnostic values">
+    <include group="profile_timeseries" time_manipulation="averaged" output_frequency="{mm}"/>
+     <include group="scalar_timeseries" time_manipulation="instantaneous" output_frequency="{mm1}"/>
+     <include group="3d_fields" time_manipulation="instantaneous" output_frequency="{mm}"/>
+     <include group="2d_fields" time_manipulation="instantaneous" output_frequency="{mm}"/>
+  </file>
+</data-writing>
