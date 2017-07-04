@@ -2,14 +2,15 @@
 
 This utility aims to simplify defining which output fields
 [MONC](https://www.software.ac.uk/who-do-we-work/monc) should save into the
-netCDF diagnostics field. This includes operations like calculating means along
+netCDF diagnostics file. This includes operations like calculating means along
 a given axis, slicing, coarse-graining and conditional averaging.
 
 The aim is that the utility will *both* create the necessary XML-configuration
-file for MONC to get the desired output and will output Fortran90 code necessary
-to calculate the fields that must be comminicated to the IO-server. Currently
-only the XML-file is produced, eventually once the best choice of MPI
-reductions has been identified the Fortran90 part will be implemented.
+file for MONC to get the desired output and will output Fortran90 code
+necessary to calculate the component fields that must be communicated to the
+IO-server. Currently only the XML-file is produced, eventually once the best
+choice of MPI reductions has been identified the Fortran90 part will be
+implemented.
 
 
 ## Example usage
