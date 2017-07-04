@@ -131,6 +131,32 @@ class Field():
     def build_xml(self):
         raise NotImplementedError
 
+    def __getitem__(self, item):
+        if not isinstance(item, tuple):
+            item = (item,)
+
+        if all([isinstance(s, slice) or isinstance(s, int) for s in item]):
+            inv_shape = np.array(self.inv_shape)
+
+            new_field = self
+            for n, v in enumerate(item):
+                if isinstance(v, slice):
+                    if slice(None, None, None):
+                        continue
+                    else:
+                        raise NotImplementedError("Can't do range slices yet")
+
+                if inv_shape[n] == np.inf:
+                    raise Exception("Can't slice dimension which has already been sliced")
+                else:
+                    inv_shape[n] = np.inf
+
+                new_field = Field("slice", op="SLICE", inv_shape=inv_shape, child_nodes=new_field.child_nodes, op_arguments=dict(idx=v))
+
+            return new_field
+        else:
+            raise NotImplementedError
+
     @property
     def shape(self):
         shape = np.ones((3,))/self.inv_shape
@@ -144,7 +170,6 @@ if __name__ == "__main__":
 
     wv = w*v
 
-    print wv
     w_horizontal_mean = w.mean(axis=0).mean(axis=1)
     w_horizontal_mean.name = "w_horizonal_mean"
     # print w.mean(axis=0).coarsen(level=1) - w
@@ -152,7 +177,10 @@ if __name__ == "__main__":
     w_prime_horz = w_horizontal_mean.repeat(axis=1).repeat(axis=0) - w
     w_prime_horz.name = "w_prime_horz"
 
-    fields = [w, v, w_horizontal_mean, w_prime_horz]
+    w_clb = w[:,:,12]
+    w_clb.name = "w_cloudbase"
+
+    fields = [w, v, wv, w_horizontal_mean, w_prime_horz, w_clb]
     monc_configuration = make_config_with_default_groups(fields)
 
     print monc_configuration.render_xml()
