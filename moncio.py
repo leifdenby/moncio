@@ -1,4 +1,6 @@
 from sympy import Symbol
+import numpy as np
+
 from xml.etree.ElementTree import Element
 from xml.etree import ElementTree
 from xml.dom import minidom
@@ -7,10 +9,29 @@ def prettify(elem):
     """Return a pretty-printed XML string for the Element.
     """
 
+def make_config_with_default_groups(fields):
+    groups_by_dimension = [[],[],[]]
+
+    for field in fields:
+        dims = len(field.shape) - 1
+        groups_by_dimension[dims].append(field)
+
+    field_groups = [MoncConfigFieldGroup("{}d".format(n+1), field) for (n, field) in enumerate(groups_by_dimension)]
+
+    field_groups = filter(lambda g: len(g.fields) > 0, field_groups)
+
+    return MoncConfig(field_groups=field_groups)
+
+
+class MoncConfigFieldGroup:
+    def __init__(self, name, fields):
+        self.fields = fields
+        self.name = name
+
 
 class MoncConfig():
-    def __init__(self, fields):
-        self.fields = fields
+    def __init__(self, field_groups):
+        self.field_groups = field_groups
 
     def write(self, xml_filename):
         pass
@@ -24,15 +45,20 @@ class MoncConfig():
         return server_configuration
 
     def _get_data_groups(self):
-        group = Element("group")
-        group.set("name", "all_fields_group")
+        group_nodes = []
 
-        for f in self.fields:
-            field_node = Element("member")
-            field_node.set("name", f.name)
-            group.append(field_node)
+        for group in self.field_groups:
+            group_node = Element("group")
+            group_node.set("name", group.name)
 
-        return [group, ]
+            for f in group.fields:
+                field_node = Element("member")
+                field_node.set("name", f.name)
+                group_node.append(field_node)
+            
+            group_nodes.append(group_node)
+
+        return group_nodes
 
     def _get_data_writing(self, filename, write_time_frequency, title):
         data_writing = Element('data-writing')
@@ -95,6 +121,10 @@ class Field():
     def build_xml(self):
         raise NotImplementedError
 
+    @property
+    def shape(self):
+        return np.ones((3,))/2**self.coarsening
+
 
 if __name__ == "__main__":
     w = Field('w')
@@ -108,6 +138,6 @@ if __name__ == "__main__":
     # print w.mean(axis=0).coarsen(level=1) - w
 
     fields = [w, v, w_prime_horizontal]
-    monc_configuration = MoncConfig(fields=fields)
+    monc_configuration = make_config_with_default_groups(fields)
 
     print monc_configuration.render_xml()
