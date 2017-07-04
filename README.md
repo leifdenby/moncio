@@ -84,7 +84,11 @@ Output:
     <member name="q_coarse"/>
   </group>
   <data-writing>
-    <file filename="diagnostics.nc" title="default_title" write_time_frequency="100.000000"/>
+    <file filename="diagnostics.nc" title="default_title" write_time_frequency="100.000000">
+      <include group="1d" output_frequency="{mm}" time_manipulation="instantaneous"/>
+      <include group="2d" output_frequency="{mm}" time_manipulation="instantaneous"/>
+      <include group="3d" output_frequency="{mm}" time_manipulation="instantaneous"/>
+    </file>
   </data-writing>
 </io-configuration>
 ```

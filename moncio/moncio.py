@@ -66,6 +66,15 @@ class MoncConfig():
         file.set("filename", filename)
         file.set("write_time_frequency", "%f" % write_time_frequency)
         file.set("title", title)
+
+        for field_group in self.field_groups:
+            include_node = Element('include')
+            include_node.set('group', field_group.name)
+            # TODO: set `time_manipulation`, `output_frequency`
+            include_node.set('time_manipulation', 'instantaneous')
+            include_node.set('output_frequency', '{mm}')
+            file.append(include_node)
+
         data_writing.append(file)
 
         return data_writing
